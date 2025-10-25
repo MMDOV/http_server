@@ -1,5 +1,6 @@
 use http_net::ThreadPool;
 use std::{
+    collections::HashMap,
     io::{BufReader, prelude::*},
     net::{TcpListener, TcpStream},
     thread,
@@ -23,7 +24,13 @@ fn handle_connection(mut stream: TcpStream) {
     let buf_reader = BufReader::new(&stream);
     let mut lines = buf_reader.lines().map(|line| line.unwrap());
     let request_line = lines.next().unwrap();
-    let headers: Vec<_> = lines.take_while(|line| !line.is_empty()).collect();
+    let headers: HashMap<_, _> = lines
+        .take_while(|line| !line.is_empty())
+        .filter_map(|line| {
+            line.split_once(':')
+                .map(|(k, v)| (k.trim().to_string().to_lowercase(), v.trim().to_string()))
+        })
+        .collect();
 
     let (status_line, contents) = match &request_line[..] {
         "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "Hello World!"),
